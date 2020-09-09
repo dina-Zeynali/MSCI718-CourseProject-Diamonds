@@ -6,4 +6,4 @@ This project contains 53,940 records and 10 features.
 
 This project is done using Rstudio.
 
-The pdf file is the project report and the R file is project main codes
+ PDF file is the project report and R file is the project main codes
