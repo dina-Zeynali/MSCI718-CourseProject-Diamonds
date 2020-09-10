@@ -1,0 +1,277 @@
+---
+title: "MSCI 718-Assignment 3- Wine Data"
+author: "Shabnam Hajian & Dina Haji Zeynaly Biooky"
+date: '2020-03-31'
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(gridExtra) 
+library(ggplot2)
+library(dplyr)
+library(GGally)
+library(tidyverse)
+library(psych)
+library(ggiraph)
+library(ggiraphExtra)
+library(tidyverse)
+library(car)
+```
+
+```{r echo=FALSE,eval=TRUE,cache=TRUE,results='hide',message=FALSE,comment= FALSE, fig.show='hide'}
+red<- read_delim("winequality-red.csv",delim = ";", locale = locale(decimal_mark = "."))
+white<- read_delim("winequality-white.csv",delim = ";", locale = locale(decimal_mark = "."))
+red
+white
+names(white)
+names(red)
+a
+```
+
+## Summary of the dataset
+
+ This data has been collected from red and white Vinho Verde wine samples from the north of Portugal to quality assessment. Wine qualification is based on the physicochemical tests from laboratory tests plus sensory tests which is more based on human tastes with the complexity of it (as human concepts always have). Thus, the relationships between the physicochemical and sensory tests are complex and still not fully understood.
+ The data comes from two separate datasets that included related data of two different wine colours, red and white. The *red* dataset contains *`r nrow(red)`* observations and the *white* one has *`r nrow(white)`* observed data. Also, both data sets have *`r ncol(white)`* variables before any changes.  
+ One of the most important variables is *quality*. This variable is the outcome variable and its data is a score between 0(very bad) and 10(very excellent) resulted as a median of at least 3 evaluations made by wine experts. Available data has the **minimum=3 **, **maximum=9 **, **median=6 **, and **mean=5.818 **. Data is integer and approximately normal. Other physicochemical variables are as below:
+ *alcohol* which is between 8 and 14.9 and skewed to right. *sulphates* which acts as an antimicrobial and antioxidant and should be in the limited amount. *volatile acidity* is the amount of acetic acid in wine, it could cause an unpleasant taste in a higher amount. *citric acid* that found in small quantities to add freshness and flavour to wines. *residual sugar* is the amount of sugar remaining after fermentation stops and its possible range is between 1 and 45 grams/litre. Our data mean is 5.44 while the majority of data are almost below 3 which is the median. *fixed acidity* is the combination of 4 to 5 acids. Our data is skewed to right with the range between 3.8 and 15.9. *chlorides* is the amount of salt in the wine and the majority of our data is below 0.05. *free sulfur dioxide* is a form of SO2 that exists in wine to prevents microbial growth and the oxidation of the wine and usually kept below 150. *total sulfur dioxide* is the amount of free and bound forms of S02 and this data looks bimodal. *density* and *pH* are our last variables which look approximately normal in this dataset with the mean of 0.99 and 3.21 respectively.  
+ In this report, we try to model a multiple linear regression to predict the quality of the wine based on the most related and available variables from the datasets. To do this first we need to make some assumptions. For the purpose of simplicity and to be able to apply multiple linear regression in our analysis, we assume that the relationship between the quality as an outcome and its predictor variables are linear and the output data is continuous and interval(although we know it is not). Second, though the red and white wines are quite different and might have different behaviour, we do not perform separate analyses for them and assume approximately the same qualifications scale for both wine colours. Third, we use the mean for quality prediction; however, the median might be a more realistic approach.   
+
+## Analysis  
+
+ In this analysis, we are trying to predict wine's quality based on its influential factors by using the multiple linear regression model. To do so, we will do the following steps.  
+
+###Tidy Data
+
+```{r echo=FALSE,eval=TRUE,cache=TRUE,results='hide',message=FALSE,comment= FALSE, fig.show='hide'}
+red <- red %>%
+  mutate(color="red")
+
+white <- white %>%
+  mutate(color="white")
+
+bind.nc <- rbind(red,white)
+bind.nc <- bind.nc %>%
+  rename(fixed_acidity=`fixed acidity`, 
+         volatile_acidity=`volatile acidity` , 
+         citric_acid=`citric acid`, 
+         residual_sugar=`residual sugar` , 
+         free_sulfur_dioxide=`free sulfur dioxide` , 
+         total_sulfur_dioxide=`total sulfur dioxide`);
+sum(is.na(bind.nc))
+str(bind.nc)
+summary(bind.nc)
+
+ggplot(bind.nc, aes(quality)) + theme(legend.position = "none")+ geom_histogram(aes(y = ..density..), colour = "black", fill = "white") +labs(x = "quality", y = "Density", title = "quality") + theme_bw()+ stat_function(fun = dnorm, args=list(mean=mean(bind.nc$quality, na.rm = TRUE), sd = sd(bind.nc$quality, na.rm = TRUE)), colour= "red", size = 1)
+ggplot(bind.nc, aes(alcohol)) + theme(legend.position = "none")+ geom_histogram(aes(y = ..density..), colour = "black", fill = "white") +labs(x = "alcohol", y = "Density", title = "alcohol") + theme_bw()
+ggplot(bind.nc, aes(sulphates)) + theme(legend.position = "none")+ geom_histogram(aes(y = ..density..), colour = "black", fill = "white") +labs(x = "sulphates", y = "Density", title = "sulphates") + theme_bw()
+ggplot(bind.nc, aes(volatile_acidity)) + theme(legend.position = "none")+ geom_histogram(aes(y = ..density..), colour = "black", fill = "white") +labs(x = "volatile acidity", y = "Density", title = "volatile acidity") + theme_bw()
+ggplot(bind.nc, aes(citric_acid)) + theme(legend.position = "none")+ geom_histogram(aes(y = ..density..), colour = "black", fill = "white") +labs(x = "citric acid", y = "Density", title = "citric acid") + theme_bw()
+ggplot(bind.nc, aes(residual_sugar)) + theme(legend.position = "none")+ geom_histogram(aes(y = ..density..), colour = "black", fill = "white") +labs(x = "residual sugar", y = "Density", title = "residual sugar") + theme_bw()
+ggplot(bind.nc, aes(fixed_acidity)) + theme(legend.position = "none")+ geom_histogram(aes(y = ..density..), colour = "black", fill = "white") +labs(x = "fixed acidity", y = "Density", title = "fixed acidity") + theme_bw()
+ggplot(bind.nc, aes(chlorides)) + theme(legend.position = "none")+ geom_histogram(aes(y = ..density..), colour = "black", fill = "white") +labs(x = "chlorides", y = "Density", title = "chlorides") + theme_bw()
+ggplot(bind.nc, aes(free_sulfur_dioxide)) + theme(legend.position = "none")+ geom_histogram(aes(y = ..density..), colour = "black", fill = "white") +labs(x = "free sulfur dioxide", y = "Density", title = "free sulfur dioxide") + theme_bw()
+ggplot(bind.nc, aes(total_sulfur_dioxide)) + theme(legend.position = "none")+ geom_histogram(aes(y = ..density..), colour = "black", fill = "white") +labs(x = "total sulfur dioxide", y = "Density", title = "total sulfur dioxide") + theme_bw()
+ggplot(bind.nc, aes(density)) + theme(legend.position = "none")+ geom_histogram(aes(y = ..density..), colour = "black", fill = "white") +labs(x = "density", y = "Density", title = "density") + theme_bw()
+ggplot(bind.nc, aes(pH)) + theme(legend.position = "none")+ geom_histogram(aes(y = ..density..), colour = "black", fill = "white") +labs(x = "pH", y = "Density", title = "pH") + theme_bw()
+
+names(bind.nc)
+bind.nc
+
+```
+  
+ After getting a general idea about our data set and variables, we understand that we need to make some changes into our data to make it "Tidy". First, it seems that each observation is in one row, each variable has one separate column and each value has its own cell. However, data are in two separate files, we need to combine these two files into one. before combining two files, we need to make sure that we will not miss information about the color of our final product. Therefore, we add a new variable and call it "color" and fill it "red" or "white" based on the information we have from the dataset. Then, we need to combine two files into one to make analysis easier. After these transformations, we need to look for missing data. Since there is no missing data, we will check for outliers. In this step, we will use visual scatter plots and check the minimum and maximum of the data points since our main purpose here is to check data for any data entry errors. The main outliers and influencers will be specified after we build our model.    
+
+```{r echo=FALSE,eval=TRUE,cache=TRUE,results='hide',message=FALSE,comment= FALSE, fig.show='hide'}
+ggplot(bind.nc,aes(x=seq(fixed_acidity), y=fixed_acidity,color=color)) + geom_point()+labs(title ="fixed_acidity")
+ggplot(bind.nc,aes(x=seq(volatile_acidity), y=volatile_acidity,color=color)) + geom_point()+labs(title ="volatile_acidity")
+ggplot(bind.nc,aes(x=seq(citric_acid), y=citric_acid,color=color)) + geom_point()+labs(title ="citric_acid")
+ggplot(bind.nc,aes(x=seq(residual_sugar), y=residual_sugar,color=color)) + geom_point()+labs(title ="residual_sugar")
+ggplot(bind.nc,aes(x=seq(chlorides), y=chlorides,color=color)) + geom_point()+labs(title ="chlorides")
+ggplot(bind.nc,aes(x=seq(free_sulfur_dioxide), y=free_sulfur_dioxide,color=color)) + geom_point()+labs(title ="free_sulfur_dioxide")
+ggplot(bind.nc,aes(x=seq(total_sulfur_dioxide),y=total_sulfur_dioxide,color=color)) + geom_point()+labs(title ="total_sulfur_dioxide")
+ggplot(bind.nc,aes(x=seq(density), y=density,color=color)) + geom_point()+labs(title ="density")
+ggplot(bind.nc,aes(x=seq(pH), y=pH,color=color)) + geom_point()+labs(title ="pH")
+ggplot(bind.nc,aes(x=seq(sulphates), y=sulphates,color=color)) + geom_point()+labs(title ="sulphates")
+ggplot(bind.nc,aes(x=seq(alcohol), y=alcohol,color=color)) + geom_point()+labs(title ="alcohol")
+ggplot(bind.nc,aes(x=seq(quality), y=quality,color=color)) + geom_point()+labs(title ="quality")
+
+
+bind <- bind.nc %>%
+  filter(residual_sugar<=45, free_sulfur_dioxide<=150, density<=1.01);
+str(bind)
+summary(bind)
+
+```
+  
+ Based on the usual and possible ranges for each of these parameters, we would see some areas of concern. First, we should pay attention to *residual sugar*. There is a data over 45 gr which could be soo rare and it has a considerable distance from the rest of our data. Thus, we consider it as a strange observation and because we do not have any access to the original data to check this observation, we would eliminate this case from our data set for now. The second variable is *free_sulfur_dioxide* which again has data far from the rest of the sample. Based on the same reasoning we did, we do not consider this observation in our model. The last variable is *density*. We know its value should not be far from 1, however, there are two data far away from the rest of our data. Right now, as we said before, we have no other choices and we have to put these observations out of our sample. This means that we have a new sample with `r nrow(bind)`row which has 4 observations less than the original file.  
+ Now we can conclude that our data is tidy and clean with no data entry error and ready to model and analyze. As we said, we will control outliers and influencers again after we build our model.
+
+###Selecting predictor variables
+
+ Based on the P. Cortez et al., we know that the most important factors in the quality of the wine are **sulphates**, **alcohol**, and **volatile acidity**. Also, we know that **citric acid**, and **residual sugar** play an important role in predicting the quality of wines although the amount of this impact is different in two different wine colors. Moreover, this study emphasizes the wine color also is important. Hence, although we will not separate two different wine colors and we will not consider two separate models for them, we will consider color as a dummy variable in our model to make it more accurate. We kept color as a categorical variable in color column. Thus, we use the *Hierarchical* method and based on these six predictors, model a multiple linear regression with a categorical variable.   
+
+```{r echo=FALSE,eval=TRUE,cache=TRUE,results='hide',message=FALSE,comment= FALSE, fig.show='hide'}
+bind$color <- as.factor(bind$color)
+#want to set white as base since it has more data
+If_red <- c(1,0)
+contrasts(bind$color) <- cbind(If_red)
+base.model<- lm ( quality ~ sulphates + alcohol + volatile_acidity + citric_acid + residual_sugar+ color , data=bind)
+summary(base.model)
+```
+  
+ From this model, we conclude that *sulphates*, *alcohol*, *volatile_acidity*, *citric_acid*, *residual_sugar* and also **color** as a categorical variable explain approximately 30% of the variance in predicting wine quality(**R-Square=0.284**) and **adjusted-R square=0.2834** which is close to R-square. In addition, we can see the influence of these variables on future wines' quality is significant for all 6 predictor variables with 95% confidence based on the coefficient's p-value. Also, the intercept's p-value is small which means it is significate too.  
+ As the next step, we use *Forced-entry* method and comparing R-square and adjusted R-square to check this assumption: Is any of the other predictor variables have a significate impact on predicting outcome  
+
+```{r echo=FALSE,eval=TRUE,cache=TRUE,results='hide',message=FALSE,comment= FALSE, fig.show='hide'}
+model2<- lm ( quality ~ sulphates + alcohol + volatile_acidity + citric_acid + residual_sugar + fixed_acidity + chlorides + free_sulfur_dioxide + total_sulfur_dioxide + density + pH + color , data=bind)
+summary(model2)
+anova(base.model,model2)
+```
+  
+ After running this model, results illustrates new **R-square=0.2995** and the new **adjusted R-square=0.2983**. Since both values increased, this model might be better to predict the quality of wines.  
+  Then, we could use the ANOVA test(based on F-test) for **"base.model"**(the model we build based on P. Cortez and et al.) and **"model2"**(with all predictor variables). This test is based on the **null hypothesis** as: *There is no difference between these two models in predicting outcome.* and the **alternative hypothesis** as: *These two models are different in predicting outcome variable.*  
+  Based on the p-value of the ANOVA test(small p-value), we could say that this model is significantly different from the first model to predict wine quality with 5% level of significate. Also as the R- square improved, we could conclude that this model is better than the first one.  
+  From the output of coefficients in this model, we can see *citric_acid* does not show a significate impact on outcome prediction as its p-value is big. We would use the *backward stepwise method* that is not a good approach generally, but it is useful when we want to check what would happen if we eliminate non-significate predictor variables.  
+
+```{r echo=FALSE,eval=TRUE,cache=TRUE,results='hide',message=FALSE,comment= FALSE, fig.show='hide'}
+model3<- lm ( quality ~ sulphates + alcohol + volatile_acidity + residual_sugar + fixed_acidity + chlorides + free_sulfur_dioxide + total_sulfur_dioxide + density + pH + color , data=bind)
+summary(model3)
+anova(model2,model3)
+```
+  
+ This Time results shows **R-square=0.2995** and **adjusted R-square=0.2983**, which means there is no improvement in results. Also, ANOVA test results present no difference between these two last models as the p-value is 0.4 and not significant. The other important note about *citric_acid* is we knew that based on the study of P. Cortez et al., this variable is an important predictor in the quality model. As a result, we can not eliminate this variable and continue with our last model.  
+
+```{r echo=FALSE, eval=TRUE, cache=TRUE}
+confint(model2)
+```
+  
+ *citric_acid* coefficient interval contains zero which is the same result as we concluded from the coefficients' p-value. This contradiction might exist as a result of between variables' effects. To find a suitable combination of predictor variables, we have to use the **all-subset** method to test all 32 possible combinations and find the best one for our model, but in this assignment, we accept This model with **R-square=0.2995** and **adjusted R-square=0.2983** and continue.  
+ 
+###Outliers and influential cases  
+
+ As we know *Outliers* and *influential* points can have an impact on your model. Although the definition of outlier depends on the context, we looked overall at data and checked for errors in data entry. Now, as we have a specific multiple linear regression model, we could have more justification to remove some data to create a more accurate model.  
+ Based on the concept of outliers, we need to look for some residuals that are far from the 0 and have an effect on R-square. To be able to make our residuals unitless and easier to compare, we use *standardize residuals* and use 95% and 99% confidence to check data by the number of items far from two and three standard deviations respectively.  
+
+```{r echo=FALSE,eval=TRUE,cache=TRUE,results='hide',message=FALSE,comment= FALSE, fig.show='hide'}
+bind$fitted <- model2$fitted.values
+bind$residuals <- model2$residuals
+bind$standardized.residuals<- rstandard(model2)
+bind$cooks.distance<-cooks.distance(model2)
+
+possible.outliers.2d <- subset(bind, standardized.residuals < -1.96 | standardized.residuals > 1.96);
+nrow(possible.outliers.2d)
+possible.outliers.3d <- subset(bind, standardized.residuals < -2.58 | standardized.residuals > 2.58);
+nrow(possible.outliers.3d)
+possible.outliers <- subset(bind, standardized.residuals < -3 | standardized.residuals > 3);
+nrow(possible.outliers)
+
+bind$cooks <- cooks.distance(model2)
+plot(sort(bind$cooks, decreasing=TRUE))
+max(bind$cooks)
+
+```
+  
+ The test results show 361 data out of 2 standard deviations and 123 data out of 3 standard deviations. Based on 6,493 total observations, these numbers mean 5.6% and 1.8%. Also, there are 53 observations with standardizing residuals more than 3 or less than -3 that might because of some problem.  
+ Since *Outliers* may not influence our model, we need to use another measure to find *influential* observations. To do so, we use *Cook's distance* as a measure of the overall influence of a case on a model. We know that Cook's distances greater than 1 are a cause for concern. However, the maximum of Cook's distances is **0.023** which is considerably less than 1 and we can conclude that there is no influential observation in these datasets for this model. These numbers mean our model robust and everything is good.  
+
+###Checking assumptions of multiple linear regression
+
+ Now as we built the multiple linear regression model, we need to check assumptions.  
+*1. All predictor variables must be quantitative or categorical, and outcome must be quantitative, continuous, and unbounded* 
+ we assume we could meet this assumption. Although our outcome variable could not meet this essential characteristic, based on what we said at the beginning, we assume this assumption is **meet**.    
+
+*2. non-zero variance* 
+ we could easily check this assumption by calculating the variance of each variable.  
+ 
+```{r echo=FALSE, eval=TRUE, cache=TRUE}
+base.model_var <- matrix(c(var(bind$sulphates),
+                           var(bind$alcohol),
+                           var(bind$volatile_acidity),
+                           var(bind$residual_sugar),
+                           var(bind$fixed_acidity),
+                           var(bind$free_sulfur_dioxide),
+                           var(bind$total_sulfur_dioxide),
+                           var(bind$density),
+                           var(bind$pH)),
+                         ncol=9);
+colnames(base.model_var) <- c("sulphates",
+                              "alcohol",
+                              "volatile_acidity",
+                              "residual_sugar",
+                              "fixed_acidity",
+                              "free_sulfur_dioxide",
+                              "total_sulfur_dioxide",
+                              "density",
+                              "pH");
+rownames(base.model_var) <- "Variances:"
+base.model_var
+``` 
+  
+ As all numbers are non-zero, we assume this assumption is **meet**. However, honestly, there are some concerns, but let's move on.  
+
+*3. no perfect multicollinearity (predictor variables should not correlate highly)*
+ we use tolerance = (1/VIF) to check multicollinearity.  
+
+```{r echo=FALSE, eval=TRUE, cache=TRUE}
+tolerance <- 1/vif(model2)
+tolerance
+mean(vif(model2))
+```
+  
+ since all numbers are above 0.1 we conclude it might not be a problem, except for *residual_sugar* which is close to 0.1 and might create some problem. To make sure, we also check to mean of *vif* that is `r mean(vif(model2))` and below 10. Thus, we assume this assumption is **meet**.    
+
+*4. predictors are uncorrelated with external variables*  
+ Actually we could not make sure about this, but we assume this assumption is **meet**.  
+
+*5. residuals are homoscedastic (constant variance), independent (test with Durbin-Watson), Normal*  
+ To test independency of the residuals, we use Durbin Watson Test:  
+
+```{r echo=FALSE, eval=TRUE, cache=TRUE}
+durbinWatsonTest(model2)
+``` 
+  
+ The test results, indicate d is very close to 2(as the threshold). Thus, we do not reject the null hypothesis that the errors are significant independent, and continue with the assumption of independence residuals at the 5% level of significance.  
+ For homoscedasticity and linearity we could use plots:  
+
+```{r echo=FALSE, eval=TRUE, cache=TRUE, message=FALSE,comment= FALSE,fig.height = 2,fig.width = 3}
+ggplot(bind, aes(standardized.residuals)) + theme(legend.position = "none")+ geom_histogram(aes(y = ..density..), colour = "black", fill = "white") +labs(x = "standardized.residuals", y = "Density", title = "Histogram") + theme_bw()+ stat_function(fun = dnorm, args=list(mean=mean(bind$standardized.residuals, na.rm = TRUE), sd = sd(bind$standardized.residuals, na.rm = TRUE)), colour= "red", size = 1)
+
+ggplot(bind, aes(sample=standardized.residuals))+ stat_qq()+ geom_qq_line(aes(color="red")) +labs(x ="Theoretical Values", y = "Observed Values", title = "QQ plot") + theme_bw()+ theme(legend.position = "none")
+
+ggplot(bind, aes(fitted, standardized.residuals)) + geom_point() + geom_smooth(method = "lm", colour = "Blue")+ labs(x = "Fitted Values", y = "Studentized Residual", title = "Scatter plot") + theme_bw()
+
+``` 
+  
+ To check assumptions of normality and homoscedasticity, we should look at plots. From the "Histogram" plot, we can observe that the residuals are not normal and its distribution is skewed to the right. Also, if we look at the "QQ plot" we can see that this visual guess from the histogram was correct as points do not lie along the red line. Thus, residuals distribution is not normal. The last plot is "Scatter plot". This plot shows that the residuals are homoscedastic. We use color for different wines' color to show there is no difference between these two wine types.  
+Since our sample is big, we preferred to use visual plots instead of the statistical tests. Based on all the above, we can conclude that assumptions of *Indipendency* and *Homoscedasity* are **meet** but the residuals are not *Normal* and this assumption **violated**.  
+
+*6. linearity (outcome variable means lie on straight line)* 
+ Lets first use a plot!  
+```{r echo=FALSE, eval=TRUE, cache=TRUE,fig.height = 2,fig.width = 3}
+ggplot(bind, aes(quality,fitted)) + geom_point() + geom_smooth(method = "lm", colour = "red")+ labs(x = "Fitted Values", y = "Quality")+ theme_bw()
+```
+   
+ Frankly, we know that this is not a good shape as we expected. The point is "quality" as the outcome variable is not as it has to(interval and unbounded), but based on first assumptions, we used linear regression(although we knew it was not a good choice) to model the output! As a result, let's accept this assumption is **meet**.  
+
+ Now after checking model assumptions, we can see that some of these assumptions are violated and the model could not robust it. Thus, we conclude that even if we accept this model for this sample, we could not generalize it.  
+
+### Conclusion  
+
+ In this report, we tried to use multiple linear regression to predict wine quality based on the 11 predictor variables from our sample data and the wine color. First, we used the last researches to select predictor variables. Then, we used forced entry to create a new model, and apply the ANOVA test for significate differences between two models. As the next step, based on the results of R-Square and adjusted R-Square and the ANOVA test, we choose the model with all 12 variables. From the model, we conclude except *citric_acid* all other predictor variables have a significate influence on quality as an outcome at the 5% level of significance. However, we could not simply eliminate this predictor variable since based on the hierarchical method, we knew that this variable is an important predictor. After building a model, we looked for outliers and influencers and did not find out any cause on the concern. After that, we checked model assumptions and find out we are not permitted to generalize this model.  
+ 
+**Potential follow-up**  
+ This model explained approximately 30% of the variance. Thus, the model seems not to be an accurate prediction of wine quality. This could be as a result of our first assumption about the outcome variable. To predict quality based on these available data, other models like logistic regression might be better. Another possible follow-up is to use all subset approach and check all possible combination of predictor variables to find the best one for our model. Also from the raw data, we realized that white and red wine have different ranges and different combinations. As a result, it would be a better idea to generate two separate models for these two types of wine instead of considering it only as a categorical variable in our model.  
+
+### References  
+   P. Cortez, A. Cerdeira, F. Almeida, T. Matos and J. Reis. Modeling wine preferences by data mining from physicochemical properties. In Decision Support Systems, Elsevier, 47(4):547-553, 2009.  
+ Some of the data about possible ranges of the parameters retrieved from below sites:  
+  
+  -https://rstudio-pubs-static.s3.amazonaws.com/57835_c4ace81da9dc45438ad0c286bcbb4224.html  
+  -https://winefolly.com/tips/sulfites-in-wine/  
+  -https://waterhouse.ucdavis.edu/whats-in-wine/fixed-acidity  
+  -https://www.vason.com/uploads/MediaGalleryArticoliDocumenti/Tartaric%20Acid%202_0%20en.pdf  
+  -https://www.awri.com.au/wp-content/uploads/2018/08/s1530.pdf  
