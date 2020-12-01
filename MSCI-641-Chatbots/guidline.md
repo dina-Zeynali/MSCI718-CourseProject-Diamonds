@@ -1,6 +1,6 @@
 # MSCI-641-CourseProject-Chatbots
 
-In this Project three different Chat bot models (Seq2Seq LSTM model, Seq2Seq LSTM model with Attention mechanism, and the Transformer model) are built 
+In this Project three different Chat Bot models (Seq2Seq LSTM model, Seq2Seq LSTM model with Attention mechanism, and the Transformer model) are built 
 
 and the performance of them is compared using the Bleu score and human judgement metrics to offer best suggestion.
 
