@@ -1,6 +1,6 @@
 # MSCI718-CourseProject-Red&WhiteWine
 
-This project shows influential factors on Wine's quality using the multiple linear regression model.
+This project shows influential factors on Wine's quality using the multiple Linear Regression Model.
 
 This project contains 6497 records and 10 variables.
 
